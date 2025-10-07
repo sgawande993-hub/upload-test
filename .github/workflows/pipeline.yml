@@ -1,0 +1,30 @@
+name: Store Test Report
+
+on:
+  workflow_dispatch:  # Trigger manually
+  push:
+    branches:
+      - main
+
+jobs:
+  generate-and-upload-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create dummy test.xml
+        run: |
+          mkdir -p reports
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > reports/test.xml
+          echo '<testsuite name="DummySuite" tests="1" failures="0" errors="0" skipped="0">' >> reports/test.xml
+          echo '  <testcase classname="DummyTest" name="sample_test"/>' >> reports/test.xml
+          echo '</testsuite>' >> reports/test.xml
+
+      - name: Upload test.xml as artifact (retain for 30 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: reports/test.xml
+          retention-days: 30
