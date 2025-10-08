@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GitHub Actions Test Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    h1 { text-align: center; }
+    canvas { max-width: 600px; margin: 0 auto; display: block; }
+  </style>
+</head>
+<body>
+  <h1>Test Results Dashboard</h1>
+  <canvas id="resultsChart"></canvas>
+
+  <script>
+    async function loadAndVisualize() {
+      const response = await fetch('test-results.xml');
+      const xmlText = await response.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+      
+      const testcases = Array.from(xmlDoc.getElementsByTagName('testcase'));
+      const names = testcases.map(tc => tc.getAttribute('name'));
+      const results = testcases.map(tc => tc.getAttribute('result'));
+
+      const passCount = results.filter(r => r === 'passed').length;
+      const failCount = results.filter(r => r === 'failed').length;
+
+      const ctx = document.getElementById('resultsChart');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Passed', 'Failed'],
+          datasets: [{
+            label: 'Test Results',
+            data: [passCount, failCount],
+            backgroundColor: ['#4CAF50', '#F44336']
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, precision: 0 }
+          }
+        }
+      });
+    }
+    loadAndVisualize();
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<testsuites>
+  <testsuite name="Unit Tests" tests="3" failures="1" errors="0" skipped="0">
+    <testcase name="Test A" time="0.5" result="passed" />
+    <testcase name="Test B" time="0.8" result="failed" />
+    <testcase name="Test C" time="0.3" result="passed" />
+  </testsuite>
+</testsuites>
