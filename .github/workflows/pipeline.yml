@@ -1,30 +1,90 @@
-name: Store Test Report
+name: Publish Test Report to GitHub Pages
 
 on:
-  workflow_dispatch:  # Trigger manually
   push:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  generate-and-upload-report:
+  generate_and_publish:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create dummy test.xml
+      - name: Generate sample XML test report
         run: |
-          mkdir -p reports
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > reports/test.xml
-          echo '<testsuite name="DummySuite" tests="1" failures="0" errors="0" skipped="0">' >> reports/test.xml
-          echo '  <testcase classname="DummyTest" name="sample_test"/>' >> reports/test.xml
-          echo '</testsuite>' >> reports/test.xml
+          cat <<EOF > test-results.xml
+          <testsuites>
+            <testsuite name="Unit Tests" tests="3" failures="1" errors="0" skipped="0">
+              <testcase name="Test A" time="0.5" result="passed" />
+              <testcase name="Test B" time="0.8" result="failed" />
+              <testcase name="Test C" time="0.3" result="passed" />
+            </testsuite>
+          </testsuites>
+          EOF
 
-      - name: Upload test.xml as artifact (retain for 30 days)
-        uses: actions/upload-artifact@v4
+      - name: Generate HTML dashboard from XML
+        run: |
+          cat <<'EOF' > index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <title>GitHub Actions Test Report</title>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 40px; }
+              h1 { text-align: center; }
+              canvas { max-width: 600px; margin: 0 auto; display: block; }
+            </style>
+          </head>
+          <body>
+            <h1>Test Results Dashboard</h1>
+            <canvas id="resultsChart"></canvas>
+
+            <script>
+              async function loadAndVisualize() {
+                const response = await fetch('test-results.xml');
+                const xmlText = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+                
+                const testcases = Array.from(xmlDoc.getElementsByTagName('testcase'));
+                const names = testcases.map(tc => tc.getAttribute('name'));
+                const results = testcases.map(tc => tc.getAttribute('result'));
+
+                const passCount = results.filter(r => r === 'passed').length;
+                const failCount = results.filter(r => r === 'failed').length;
+
+                const ctx = document.getElementById('resultsChart');
+                new Chart(ctx, {
+                  type: 'bar',
+                  data: {
+                    labels: ['Passed', 'Failed'],
+                    datasets: [{
+                      label: 'Test Results',
+                      data: [passCount, failCount],
+                      backgroundColor: ['#4CAF50', '#F44336']
+                    }]
+                  },
+                  options: {
+                    responsive: true,
+                    scales: {
+                      y: { beginAtZero: true, precision: 0 }
+                    }
+                  }
+                });
+              }
+              loadAndVisualize();
+            </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          name: test-report
-          path: reports/test.xml
-          retention-days: 30
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
